@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Ultimate Battle Royale 3.0 - Mobile</title>
+<style>
+body{margin:0;overflow:hidden;font-family:sans-serif;}
+canvas{display:block;}
+#topUI{position:absolute;left:10px;top:10px;color:#fff;font-weight:bold;text-shadow:0 0 4px #000;}
+#ui{position:absolute;bottom:0;width:100%;pointer-events:none;}
+.btn{pointer-events:auto;padding:14px 18px;margin:6px;border-radius:50%;background:#ffffffaa;border:0;font-size:20px;}
+#left,#right{position:absolute;bottom:120px;left:20px;}
+#jump{position:absolute;bottom:120px;right:140px;}
+#run{position:absolute;bottom:220px;right:60px;}
+#shoot{position:absolute;bottom:120px;right:20px;}
+#switch{position:absolute;bottom:220px;right:140px;}
+#drive{position:absolute;bottom:220px;left:140px;}
+#shop{position:absolute;top:50px;right:20px;padding:8px 12px;background:#ffffffaa;border-radius:8px;font-weight:bold;}
+#message{position:absolute;left:50%;transform:translateX(-50%);top:40%;background:#000000cc;color:#fff;padding:10px 14px;border-radius:8px;display:none;}
+</style>
+</head>
+<body>
+<div id="topUI">
+Health: <span id="health">300</span> | Ammo: <span id="ammo">5</span> | Gems: <span id="gems">0</span> | Bank: <span id="bank">0</span> | Fire Pass: <span id="fire">0</span>
+</div>
+<div id="ui">
+<button id="left" class="btn">⬅️</button>
+<button id="right" class="btn">➡️</button>
+<button id="jump" class="btn">⬆️</button>
+<button id="run" class="btn">🏃</button>
+<button id="shoot" class="btn">🔫</button>
+<button id="switch" class="btn">🔄</button>
+<button id="drive" class="btn">🚗</button>
+</div>
+<div id="shop">متجر 💰</div>
+<div id="message"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.156.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.156.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+// ====== المشهد والكاميرا ======
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x87ceeb);
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,2000);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio/2);
+document.body.appendChild(renderer.domElement);
+
+// إضاءة
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
+const dir=new THREE.DirectionalLight(0xffffff,0.8); dir.position.set(15,20,15); scene.add(dir);
+
+// أرضية ضخمة
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(300,300,50,50),new THREE.MeshStandardMaterial({color:0x228B22}));
+floor.rotation.x=-Math.PI/2; scene.add(floor);
+
+// منازل وأشجار
+const houses=[]; const houseMat=new THREE.MeshStandardMaterial({color:0x8B4513});
+for(let i=0;i<15;i++){ const h=new THREE.Mesh(new THREE.BoxGeometry(4,3,4),houseMat); h.position.set(Math.random()*280-140,1.5,Math.random()*280-140); scene.add(h); houses.push(h);}
+const bushGeo=new THREE.ConeGeometry(0.5,1,6); const bushMat=new THREE.MeshStandardMaterial({color:0x006400});
+for(let i=0;i<70;i++){ const b=new THREE.Mesh(bushGeo,bushMat); b.position.set(Math.random()*280-140,0.5,Math.random()*280-140); scene.add(b);}
+
+// اللاعب
+const loader=new THREE.GLTFLoader(); let player=null;
+loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb',gltf=>{player=gltf.scene; player.scale.set(0.3,0.3,0.3); player.position.set(0,0.5,0); scene.add(player);});
+
+// أعداء AI
+const enemies=[]; for(let i=0;i<50;i++){ const geo=new THREE.BoxGeometry(1,1,1); const mat=new THREE.MeshStandardMaterial({color:0xff4444}); const e=new THREE.Mesh(geo,mat); e.position.set(Math.random()*280-140,0.5,Math.random()*280-140); scene.add(e); enemies.push({mesh:e,health:300});}
+
+// جواهر وصناديق
+const gems=[]; const gemMat=new THREE.MeshStandardMaterial({color:0xffff33});
+for(let i=0;i<40;i++){ const g=new THREE.Mesh(new THREE.SphereGeometry(0.2,6,6),gemMat); g.position.set(Math.random()*280-140,0.3,Math.random()*280-140); scene.add(g); gems.push(g);}
+const chests=[]; const chestMat=new THREE.MeshStandardMaterial({color:0xffa500});
+for(let i=0;i<15;i++){ const c=new THREE.Mesh(new THREE.BoxGeometry(1,0.7,1),chestMat); c.position.set(Math.random()*280-140,0.35,Math.random()*280-140); scene.add(c); chests.push(c);}
+
+// سيارات
+const cars=[]; const carMat=new THREE.MeshStandardMaterial({color:0xff0000});
+for(let i=0;i<7;i++){ const car=new THREE.Mesh(new THREE.BoxGeometry(2,1,4),carMat); car.position.set(Math.random()*280-140,0.5,Math.random()*280-140); scene.add(car); cars.push(car);}
+
+// محطة شحن
+const stationMat=new THREE.MeshStandardMaterial({color:0x4444ff});
+const station=new THREE.Mesh(new THREE.BoxGeometry(2,1,2),stationMat);
+station.position.set(-140,0.5,-140); scene.add(station);
+
+// ذخيرة
+const bullets=[]; const bulletGeo=new THREE.SphereGeometry(0.08,6,6); const bulletMat=new THREE.MeshStandardMaterial({color:0x222222});
+
+// حالة اللاعب
+let state={gems:0,bank:0,ammo:5,health:300,speed:0.5,jumpPower:0.8,grounde
